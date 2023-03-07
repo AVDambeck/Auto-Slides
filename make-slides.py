@@ -1,6 +1,6 @@
 #!python
 """00. this is a program which inputs a set of images with a specific naming format, and outputs a pdf containing a slide show of the images with titles;
-0.  the specific name format is ##.mm-dd-yyyy.name_of_image.jpg7;
+0.  the specific name format is id.mm-dd-yyyy.name_of_image.jpg7;
 1. import and define;
 2. validate image names;
 3. create a slide object from each picture, including the extracted name, date, and file location;
@@ -23,6 +23,7 @@ parser.add_argument("-v", "--verbose",  action='store_true', help="Increase verb
 parser.add_argument("-f", "--force",  action='store_true', help="Overide exiting cache.")
 parser.add_argument("-d", "--dir", help="Directory to load files from.")
 parser.add_argument("-o", "--output", help="Specify output file.")
+parser.add_argument("-n", "--noformat", action='store_true' help="Disable reformating of text, eg display names will include underscores, lowercase letters, etc.")
 args = parser.parse_args()
 
 
@@ -42,10 +43,14 @@ else:
     files = glob.glob(str(args.dir)+"*")
     dir = args.dir
 
-if args.output == None:
-    output = "slides.pdf"
-else:
+output = "slides.pdf"
+if args.output:
     output = args.output
+
+text_formatting = True
+if args.noformat:
+    text_formatting = False
+
     
 class slide:
     def __init__(self, file):
@@ -55,6 +60,12 @@ class slide:
         self.date = string[1]
         self.name = string[2]
         self.format = string[3]
+        if text_formatting:
+            self.display_name = self.name.replace('_', ' ').title()
+            self.display_date = self.date.replace('-', '/')
+        else:
+            self.display_name = self.name
+            self.display_date = self.date
         self.page_name = str(self.date + "." + self.name)
         
     def html(self):
@@ -80,8 +91,8 @@ f'</head>'
 f'<html>'
 f'  <body>'
 f'    <div class=text>'
-f'      <h1>{self.name}</h1>'
-f'      <h2>{self.date}</h2>'
+f'      <h1>{self.display_name}</h1>'
+f'      <h2>{self.display_date}</h2>'
 f'    </div>'
 f'    <img src="../{self.file}" width="auto" height="{img_height}px">'
 )
@@ -108,9 +119,11 @@ for f in files:
     pattern = re.compile("[0-9]{2}.[0-9]{2}-[0-9]{2}-[0-9]{4}.\w+.(?:jpg|gif|png|JPG)")
     if pattern.match(string):
         imgs.append(string)
+    else:
+        logging.info(f'Skipping {string}. Does not match namespace pattern ID.MM-DD-YYYY.NAME.FMT')
 
 if imgs == []:
-    logging.warning(f'No valid files found. Are your filenames MM-DD-YYYY.NAME.FMT?')
+    logging.warning(f'No valid files found. Are your filenames ID.MM-DD-YYYY.NAME.FMT?')
     exit()
 
 #3 create slide oject from each picture
