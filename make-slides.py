@@ -23,7 +23,7 @@ parser.add_argument("-v", "--verbose",  action='store_true', help="Increase verb
 parser.add_argument("-f", "--force",  action='store_true', help="Overide exiting cache.")
 parser.add_argument("-d", "--dir", help="Directory to load files from.")
 parser.add_argument("-o", "--output", help="Specify output file.")
-parser.add_argument("-n", "--noformat", action='store_true' help="Disable reformating of text, eg display names will include underscores, lowercase letters, etc.")
+parser.add_argument("-n", "--noformat", action='store_true', help="Disable reformating of text, eg display names will include underscores, lowercase letters, etc.")
 args = parser.parse_args()
 
 
@@ -61,7 +61,7 @@ class slide:
         self.name = string[2]
         self.format = string[3]
         if text_formatting:
-            self.display_name = self.name.replace('_', ' ').title()
+            self.display_name = self.name.replace('_', ' ').replace('_slash_', '/').replace('_plus_', '+').title()
             self.display_date = self.date.replace('-', '/')
         else:
             self.display_name = self.name
@@ -97,6 +97,11 @@ f'    </div>'
 f'    <img src="../{self.file}" width="auto" height="{img_height}px">'
 )
 
+
+def slide_sort_value(slide):
+        return(str(slide.id) + str(slide.date))
+
+    
 cache_path = 'cache/' 
 if not os.path.exists(cache_path):
     os.makedirs(cache_path)
@@ -131,10 +136,11 @@ slides = []
 for i in imgs:
     foo = slide(i)
     slides.append(foo)
+slide.sort(key=slide_sort_value)
     
 #4 for each slide, generate HTML and render to file
 for s in slides:
-    logging.info(f'begining {s.name}, slide number {self.id_number}')
+    logging.info(f'begining {s.name}, slide number {s.id_number}')
     html_file = open(f'{cache_path}slide.html', "w+")
     html_file.write(s.html())
     html_file.close()
