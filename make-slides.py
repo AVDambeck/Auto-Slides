@@ -1,6 +1,6 @@
 #!python
 """00. this is a program which inputs a set of images with a specific naming format, and outputs a pdf containing a slide show of the images with titles;
-0.  the specific name format is mm-dd-yyyy.name_of_image.jpg7;
+0.  the specific name format is ##.mm-dd-yyyy.name_of_image.jpg7;
 1. import and define;
 2. validate image names;
 3. create a slide object from each picture, including the extracted name, date, and file location;
@@ -22,6 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--verbose",  action='store_true', help="Increase verbosity.")
 parser.add_argument("-f", "--force",  action='store_true', help="Overide exiting cache.")
 parser.add_argument("-d", "--dir", help="Directory to load files from.")
+parser.add_argument("-o", "--output", help="Specify output file.")
 args = parser.parse_args()
 
 
@@ -41,13 +42,19 @@ else:
     files = glob.glob(str(args.dir)+"*")
     dir = args.dir
 
+if args.output == None:
+    output = "slides.pdf"
+else:
+    output = args.output
+    
 class slide:
     def __init__(self, file):
         self.file = str(dir) + str(file)
         string = str(file).split(".")
-        self.date = string[0]
-        self.name = string[1]
-        self.format = string[2]
+        self.id_number = string[0]
+        self.date = string[1]
+        self.name = string[2]
+        self.format = string[3]
         self.page_name = str(self.date + "." + self.name)
         
     def html(self):
@@ -98,7 +105,7 @@ imgs = []
 
 for f in files:
     string = (f.removeprefix(dir))
-    pattern = re.compile("[0-9]{2}-[0-9]{2}-[0-9]{4}.\w+.(?:jpg|gif|png|JPG)")
+    pattern = re.compile("[0-9]{2}.[0-9]{2}-[0-9]{2}-[0-9]{4}.\w+.(?:jpg|gif|png|JPG)")
     if pattern.match(string):
         imgs.append(string)
 
@@ -114,6 +121,7 @@ for i in imgs:
     
 #4 for each slide, generate HTML and render to file
 for s in slides:
+    logging.info(f'begining {s.name}, slide number {self.id_number}')
     html_file = open(f'{cache_path}slide.html', "w+")
     html_file.write(s.html())
     html_file.close()
@@ -122,7 +130,7 @@ for s in slides:
 
 
 #5 unite pages
-subprocess.run(f'pdfunite {cache_path}*.pdf slides.pdf', shell=True)
+subprocess.run(f'pdfunite {cache_path}*.pdf {output}', shell=True)
 
 #6 exit
 cache_files = glob.glob(f'{cache_path}*')
