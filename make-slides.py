@@ -1,9 +1,9 @@
 #!python
-"""00. this is a program which inputs a set of images with a specific naming format, and outputs a pdf containing a slide show of the images with titles;
-0.  the specific name format is id.mm-dd-yyyy.name_of_image.jpg7;
-1. import and define;
-2. validate image names;
-3. create a slide object from each picture, including the extracted name, date, and file location;
+"""00. this is 1;5Da program which inputs a set of images with a specific naming format, and outputs a pdf containing a slide show of the images with titles;
+0.  the spe1;5C1;5Dcific name format is id.mm-dd-yyyy.name_of_image.jpg7;
+1. impo1;5A1;5C1;5Drt and define;
+2. 1;5B1;5A1;5C1;5Dvalidate image names;
+3. 1;5B1;5A1;5C1;5Dcreate a slide object from each picture, including the extracted name, date, and file location;
 4. for each slide, genorate HTML, and render to file;
 5. unite the files;
 6. exit;
@@ -18,12 +18,18 @@ import os
 from pyhtml2pdf import converter
 import subprocess
 
+margin = 50
+page_width = 1920
+page_height = 1080
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--verbose",  action='store_true', help="Increase verbosity.")
 parser.add_argument("-f", "--force",  action='store_true', help="Overide exiting cache.")
 parser.add_argument("-d", "--dir", help="Directory to load files from.")
 parser.add_argument("-o", "--output", help="Specify output file.")
 parser.add_argument("-n", "--noformat", action='store_true', help="Disable reformating of text, eg display names will include underscores, lowercase letters, etc.")
+parser.add_argument("-D", "--nodate", action='store_true', help="Disable date.")
+parser.add_argument("-t", "--title", help="Will genorate a title page with the text 'Title|Subtitle.'")
 args = parser.parse_args()
 
 
@@ -51,12 +57,50 @@ text_formatting = True
 if args.noformat:
     text_formatting = False
 
-    
+show_date = True
+if args.nodate:
+    show_date = False
+   
+show_title = False
+if args.title:
+    show_title = True
+    string = args.title.split("|")
+    title_text = string[0]
+    subtitle_text = string[1]
+    title_html = (f'<!DOCTYPE html>'
+    '<head>'
+    '<style>'
+    '@page {'
+    f'    size: {page_width}px {page_height}px;'
+    f'    margin: {margin}px {margin}px {margin}px {margin}px;'
+    '}'
+    'div {'
+    '     position: fixed;'
+    '     top: 40%;'
+    '     left: 50%;'
+    '     transform: translate(-50%, -50%);'
+    '}'
+    'h1 {'
+    '     font-size: 68pt;'
+    '}'
+    'h2 {'
+    '     font-size: 28pt;'
+    '}'
+    '</style>'
+    '</head>'
+    '<html>'
+    '  <body>'
+    '     <div>'
+    f'      <h1>{title_text}</h1>'
+    f'      <h2>{subtitle_text}</h2>'
+    '     </div'
+    )
+
 class slide:
     def __init__(self, file):
         self.file = str(dir) + str(file)
         string = str(file).split(".")
-        self.id_number = string[0]
+        self.id = string[0]
         self.date = string[1]
         self.name = string[2]
         self.format = string[3]
@@ -66,10 +110,11 @@ class slide:
         else:
             self.display_name = self.name
             self.display_date = self.date
+        if show_date == False:
+            self.display_date=""
         self.page_name = str(self.date + "." + self.name)
         
     def html(self):
-        margin = 50
         #extra 4 px buffer makes the page setting happy. idk why
         img_height = 1080 - ((margin+4)*2)
         return(
@@ -77,7 +122,7 @@ f'<!DOCTYPE html>'
 f'<head>'
 f'<style>'
 '@page {'
-'    size: 1920px 1080px;'
+f'    size: {page_width}px {page_height}px;'
 f'    margin: {margin}px {margin}px {margin}px {margin}px;'
 '}'
 'img {'
@@ -136,16 +181,29 @@ slides = []
 for i in imgs:
     foo = slide(i)
     slides.append(foo)
-slide.sort(key=slide_sort_value)
+slides.sort(key=slide_sort_value)
     
 #4 for each slide, generate HTML and render to file
+
+#4.1 if theres a title make that
+
+if show_title:
+    logging.info(f'begining title slide')
+    html_file = open(f'{cache_path}slide.html', "w+")
+    html_file.write(title_html)
+    html_file.close()
+    html_path = str(os.path.abspath(f'{cache_path}slide.html'))
+    converter.convert(f'file:///{html_path}', f'{cache_path}000-title.pdf', print_options={}, compress=True, power=2)
+
+
+
 for s in slides:
-    logging.info(f'begining {s.name}, slide number {s.id_number}')
+    logging.info(f'begining {s.name}, slide number {s.id}')
     html_file = open(f'{cache_path}slide.html', "w+")
     html_file.write(s.html())
     html_file.close()
     html_path = str(os.path.abspath(f'{cache_path}slide.html'))
-    converter.convert(f'file:///{html_path}', f'{cache_path}{s.page_name}.pdf', print_options={})
+    converter.convert(f'file:///{html_path}', f'{cache_path}{slide_sort_value(s)}{s.page_name}.pdf', print_options={}, compress=True, power=2)
 
 
 #5 unite pages
