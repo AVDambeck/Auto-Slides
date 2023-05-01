@@ -21,22 +21,28 @@ import subprocess
 margin = 50
 page_width = 1920
 page_height = 1080
+page_ratio = page_width/page_height
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--verbose",  action='store_true', help="Increase verbosity.")
+parser.add_argument("--debug", action='store_true', help="presevers some files for debugging porposus.")
 parser.add_argument("-f", "--force",  action='store_true', help="Overide exiting cache.")
 parser.add_argument("-d", "--dir", help="Directory to load files from.")
 parser.add_argument("-o", "--output", help="Specify output file.")
 parser.add_argument("-n", "--noformat", action='store_true', help="Disable reformating of text, eg display names will include underscores, lowercase letters, etc.")
 parser.add_argument("-D", "--nodate", action='store_true', help="Disable date.")
-parser.add_argument("-t", "--title", help="Will genorate a title page with the text 'Title|Subtitle.'")
+parser.add_argument("-t", "--title", help='Will genorate a title page with the text "Title|Subtitle."')
+parser.add_argument("-H", "--headerposition", help='"left" "right" "top" "bottom" or "auto"')
 args = parser.parse_args()
-
 
 if args.verbose == True:
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 else:
     logging.basicConfig(level=logging.WARNING, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+
+ProcessFiles = True
+if args.debug:
+    removeProcessFiles = False
 
 force = False
 if args.force:
@@ -96,6 +102,105 @@ if args.title:
     '     </div'
     )
 
+if args.headerposition in ["left", "right", "top", "bottom", "auto"]:
+    header = args.headerposition
+elif not args.headerposition: 
+    header = "left"
+else: 
+    logging.warning(f'Invalid header position.')
+    exit()
+
+# Testing new html paradigm
+
+imgCssLs = [
+]
+
+textCssLs = [
+]
+
+def makeCss(ls):
+    string = ""
+    for i in ls:
+       string += (f"    {i}")
+    return(string)
+
+imgCss = makeCss(imgCssLs)
+textCss = makeCss(textCssLs)
+
+def floatLeft():
+    global imgCssLs
+    global textCssLs
+    global imgCss
+    global textCss
+
+    imgCssLs = [
+        f'float: right;'
+    ]
+
+    textCssLs = [
+        f'float: left;'
+    ]
+
+    imgCss = makeCss(imgCssLs)
+    textCss = makeCss(textCssLs)
+
+def floatRight():
+    global imgCssLs
+    global textCssLs
+    global imgCss
+    global textCss
+
+    imgCssLs = [
+        f'float: left;'
+    ]
+
+    textCssLs = [
+        f'float: right;'
+    ]
+
+    imgCss = makeCss(imgCssLs)
+    textCss = makeCss(textCssLs)
+
+def floatTop():
+    global imgCssLs
+    global textCssLs
+    global imgCss
+    global textCss
+
+    imgCssLs = [
+        f'margin: auto;',
+        f'display: block;'
+    ]
+
+    textCssLs = [
+        f'text-align: center;'
+    ]
+
+    imgCss = makeCss(imgCssLs)
+    textCss = makeCss(textCssLs)
+
+def floatBottom():
+    logging.warning(f'bottom position not yet implemented. Falling back to top')
+    floatTop()
+
+if header == "left":
+    floatLeft()
+    
+if header == "right":
+    floatRight()
+
+if header == "top":
+    floatTop()
+    
+if header == "bottom":
+    floatBottom()
+    
+if header == "auto":
+    logging.warning(f'Auto position not yet implemented. Falling back to left')
+    floatLeft()
+    # see slide class def(heml) function.
+    #pass
+
 class slide:
     def __init__(self, file):
         self.file = str(dir) + str(file)
@@ -126,10 +231,10 @@ f'    size: {page_width}px {page_height}px;'
 f'    margin: {margin}px {margin}px {margin}px {margin}px;'
 '}'
 'img {'
-'    float: right;'
+f'{imgCss}'
 '}'
 '.text {'
-'    float: left'
+f'{textCss}'
 '}'
 f'</style>'
 f'</head>'
@@ -210,7 +315,8 @@ for s in slides:
 subprocess.run(f'pdfunite {cache_path}*.pdf {output}', shell=True)
 
 #6 exit
-cache_files = glob.glob(f'{cache_path}*')
-for file in cache_files:
-    os.remove(file)
-os.rmdir(cache_path)
+if removeProcessFiles:
+    cache_files = glob.glob(f'{cache_path}*')
+    for file in cache_files:
+        os.remove(file)
+    os.rmdir(cache_path)
